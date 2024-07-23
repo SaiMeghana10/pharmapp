@@ -45,34 +45,13 @@ const ViewMedicines: React.FC = () => {
 
   useEffect(() => {
     if (initialized) {
-      createExpiredItemsTable();
       loadData();
     }
   }, [initialized]);
 
-  const createExpiredItemsTable = async () => {
-    try {
-      performSQLAction(async (db: SQLiteDBConnection | undefined) => {
-        await db?.query(`
-          CREATE TABLE IF NOT EXISTS expired_items (
-            id INTEGER PRIMARY KEY,
-            name TEXT,
-            type TEXT,
-            quantity TEXT,
-            expiry_date TEXT,
-            batch_no TEXT,
-            price REAL
-          )
-        `);
-      });
-    } catch (error) {
-      alert((error as Error).message);
-    }
-  };
-
   const loadData = async () => {
     try {
-      performSQLAction(async (db: SQLiteDBConnection | undefined) => {
+      await performSQLAction(async (db: SQLiteDBConnection | undefined) => {
         const currentDate = new Date().toISOString().split('T')[0];
         
         const respSelect = await db?.query(`SELECT * FROM medicines`);
@@ -103,8 +82,10 @@ const ViewMedicines: React.FC = () => {
   };
 
   const updateItem = async () => {
+    if (!editItem) return;
+
     try {
-      performSQLAction(
+      await performSQLAction(
         async (db: SQLiteDBConnection | undefined) => {
           await db?.query(
             `UPDATE medicines SET name=?, type=?, quantity=?, expiry_date=?, batch_no=?, price=? WHERE id=?`,
@@ -115,11 +96,14 @@ const ViewMedicines: React.FC = () => {
               inputExpiryDate,
               inputBatchNo,
               inputPrice,
-              editItem?.id,
+              editItem.id,
             ]
           );
 
-          loadData(); // Reload data to refresh the list
+          const respSelect = await db?.query(`SELECT * FROM medicines;`);
+          setItems(respSelect?.values || []);
+        },
+        async () => {
           resetInputs();
         }
       );
@@ -130,10 +114,12 @@ const ViewMedicines: React.FC = () => {
 
   const deleteItem = async (itemId: number) => {
     try {
-      performSQLAction(
+      await performSQLAction(
         async (db: SQLiteDBConnection | undefined) => {
           await db?.query(`DELETE FROM medicines WHERE id=?;`, [itemId]);
-          loadData(); // Reload data to refresh the list
+
+          const respSelect = await db?.query(`SELECT * FROM medicines;`);
+          setItems(respSelect?.values || []);
         }
       );
     } catch (error) {
@@ -174,9 +160,9 @@ const ViewMedicines: React.FC = () => {
   return (
     <IonPage>
       <IonHeader className='headercls'>
-    
-        View Medicines
         
+          View Medicines
+       
       </IonHeader>
       <IonContent fullscreen className="ion-padding">
         <IonGrid>
@@ -210,63 +196,6 @@ const ViewMedicines: React.FC = () => {
           ))}
         </IonGrid>
 
-        {editItem && (
-          <>
-            <IonItem className="itemcls">
-              <IonLabel className="labelcls">Name</IonLabel>
-              <IonInput
-                type="text"
-                value={inputName}
-                onIonInput={(e) => setInputName(e.target.value as string)}
-              />
-            </IonItem>
-            <IonItem className="itemcls">
-              <IonLabel className="labelcls">Type</IonLabel>
-              <IonInput
-                type="text"
-                value={inputType}
-                onIonInput={(e) => setInputType(e.target.value as string)}
-              />
-            </IonItem>
-            <IonItem className="itemcls">
-              <IonLabel className="labelcls">Quantity</IonLabel>
-              <IonInput
-                type="text"
-                value={inputQuantity}
-                onIonInput={(e) => setInputQuantity(e.target.value as string)}
-              />
-            </IonItem>
-            <IonItem className="itemcls">
-              <IonLabel className="labelcls">Expiry Date</IonLabel>
-              <IonInput
-                type="date"
-                value={inputExpiryDate}
-                onIonInput={(e) => setInputExpiryDate(e.target.value as string)}
-              />
-            </IonItem>
-            <IonItem className="itemcls">
-              <IonLabel className="labelcls">Batch No</IonLabel>
-              <IonInput
-                type="text"
-                value={inputBatchNo}
-                onIonInput={(e) => setInputBatchNo(e.target.value as string)}
-              />
-            </IonItem>
-            <IonItem className="itemcls">
-              <IonLabel className="labelcls">Price (Rs.)</IonLabel>
-              <IonInput
-                type="number"
-                value={inputPrice}
-                onIonInput={(e) => setInputPrice(Number(e.target.value))}
-              />
-            </IonItem>
-            <IonButton color="light" onClick={() => doEditItem(undefined)}>CANCEL</IonButton>
-            <IonButton color="light" onClick={updateItem}>UPDATE</IonButton>
-          </>
-        )}
-
-        {ConfirmationAlert}
-
         <h2>Expired Medicines</h2>
         <IonGrid>
           <IonRow className='titles'>
@@ -290,6 +219,62 @@ const ViewMedicines: React.FC = () => {
             </IonRow>
           ))}
         </IonGrid>
+
+        {editItem && (
+          <>
+            <IonItem className="itemcls">
+              <IonLabel className="labelcls">Name</IonLabel>
+              <IonInput
+                type="text"
+                value={inputName}
+                onIonChange={(e) => setInputName(e.detail.value!)}
+              />
+            </IonItem>
+            <IonItem className="itemcls">
+              <IonLabel className="labelcls">Type</IonLabel>
+              <IonInput
+                type="text"
+                value={inputType}
+                onIonChange={(e) => setInputType(e.detail.value!)}
+              />
+            </IonItem>
+            <IonItem className="itemcls">
+              <IonLabel className="labelcls">Quantity</IonLabel>
+              <IonInput
+                type="text"
+                value={inputQuantity}
+                onIonChange={(e) => setInputQuantity(e.detail.value!)}
+              />
+            </IonItem>
+            <IonItem className="itemcls">
+              <IonLabel className="labelcls">Expiry Date</IonLabel>
+              <IonInput
+                type="date"
+                value={inputExpiryDate}
+                onIonChange={(e) => setInputExpiryDate(e.detail.value!)}
+              />
+            </IonItem>
+            <IonItem className="itemcls">
+              <IonLabel className="labelcls">Batch No</IonLabel>
+              <IonInput
+                type="text"
+                value={inputBatchNo}
+                onIonChange={(e) => setInputBatchNo(e.detail.value!)}
+              />
+            </IonItem>
+            <IonItem className="itemcls">
+              <IonLabel className="labelcls">Price (Rs.)</IonLabel>
+              <IonInput
+                type="number"
+                value={inputPrice}
+                onIonChange={(e) => setInputPrice(Number(e.detail.value!))}
+              />
+            </IonItem>
+            <IonButton expand="full" onClick={updateItem}>Update</IonButton>
+          </>
+        )}
+
+        {ConfirmationAlert}
       </IonContent>
       <IonFooter className='footer'>
         <IonText>Contact Us : 9010203040</IonText>
