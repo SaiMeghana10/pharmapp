@@ -81,8 +81,21 @@ const useSQLiteDB = () => {
         );
       `;
 
+      const queryCreateExpiredItemsTable = `
+        CREATE TABLE IF NOT EXISTS expired_items (
+          id INTEGER PRIMARY KEY,
+          name TEXT,
+          type TEXT,
+          quantity TEXT,
+          expiry_date TEXT,
+          batch_no TEXT,
+          price REAL
+        );
+      `;
+
       await db?.execute(queryCreateMedicinesTable);
       await db?.execute(queryCreateGeneralItemsTable);
+      await db?.execute(queryCreateExpiredItemsTable);
 
       console.log("Tables created successfully.");
     });
